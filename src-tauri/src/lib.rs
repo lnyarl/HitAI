@@ -185,6 +185,8 @@ fn set_tool_active(tool: String, active: bool) -> Result<String, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        // 창 위치, 크기, 최대화 여부를 기억한다.
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             get_snapshot,
             list_sessions,
