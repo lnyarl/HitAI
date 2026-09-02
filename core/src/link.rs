@@ -70,7 +70,7 @@ impl Tool {
     }
 
     fn dir(self) -> Option<PathBuf> {
-        let home = dirs::home_dir()?;
+        let home = crate::base_home().ok()?;
         Some(match self {
             Tool::ClaudeCode => home.join(".claude"),
             Tool::Codex => home.join(".codex"),
@@ -502,8 +502,7 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(tmp.join(".claude")).unwrap();
         fs::create_dir_all(tmp.join(".codex")).unwrap();
-        std::env::set_var("HOME", &tmp);
-        std::env::set_var("USERPROFILE", &tmp);
+        std::env::set_var("HITAI_HOME", &tmp);
         tmp
     }
 

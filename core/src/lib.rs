@@ -23,11 +23,25 @@ pub const HIT_DAMAGE: i32 = 7;
 const RULES_HEADER: &str = "# HitAI 훈육 규칙\n\n\
 사용자가 HitAI 앱에서 직접 때리며 남긴 규칙이다. 모든 세션에서 지켜야 한다.\n\n";
 
+/// 기준이 되는 홈 경로.
+///
+/// `HITAI_HOME`이 설정되어 있으면 그것을 쓴다. Windows의 `dirs::home_dir()`은
+/// 환경 변수가 아니라 시스템 API를 보기 때문에, 이 덮어쓰기가 없으면 테스트나
+/// 이동식 설치에서 홈을 바꿀 수 없다.
+pub fn base_home() -> io::Result<PathBuf> {
+    if let Some(path) = std::env::var_os("HITAI_HOME") {
+        let path = PathBuf::from(path);
+        if !path.as_os_str().is_empty() {
+            return Ok(path);
+        }
+    }
+    dirs::home_dir()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "홈 디렉터리를 찾을 수 없습니다"))
+}
+
 /// `~/.hitai`
 pub fn home_dir() -> io::Result<PathBuf> {
-    let base = dirs::home_dir()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "홈 디렉터리를 찾을 수 없습니다"))?;
-    let dir = base.join(".hitai");
+    let dir = base_home()?.join(".hitai");
     fs::create_dir_all(&dir)?;
     Ok(dir)
 }
@@ -413,8 +427,7 @@ mod tests {
         let tmp = std::env::temp_dir().join(format!("hitai-hit-{}", std::process::id()));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(&tmp).unwrap();
-        std::env::set_var("HOME", &tmp);
-        std::env::set_var("USERPROFILE", &tmp);
+        std::env::set_var("HITAI_HOME", &tmp);
 
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -462,8 +475,7 @@ mod tests {
         let tmp = std::env::temp_dir().join(format!("hitai-route-{}", std::process::id()));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(&tmp).unwrap();
-        std::env::set_var("HOME", &tmp);
-        std::env::set_var("USERPROFILE", &tmp);
+        std::env::set_var("HITAI_HOME", &tmp);
 
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -521,8 +533,7 @@ mod tests {
         let tmp = std::env::temp_dir().join(format!("hitai-rules-{}", std::process::id()));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(&tmp).unwrap();
-        std::env::set_var("HOME", &tmp);
-        std::env::set_var("USERPROFILE", &tmp);
+        std::env::set_var("HITAI_HOME", &tmp);
 
         append_rule("파일 지우기 전에 확인").unwrap();
         append_rule("테스트 지우지 마").unwrap();

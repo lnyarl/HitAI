@@ -73,7 +73,7 @@ fn ago(at: DateTime<Utc>) -> String {
 }
 
 fn home() -> Option<PathBuf> {
-    dirs::home_dir()
+    crate::base_home().ok()
 }
 
 fn mtime(path: &Path) -> Option<DateTime<Utc>> {
