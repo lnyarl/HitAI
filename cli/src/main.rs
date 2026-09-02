@@ -135,7 +135,9 @@ fn cmd_sessions() -> Result<(), String> {
             format!("  ({})", s.detail)
         };
         println!("  [{:<11}] {}{branch}   {}", s.tool_label, s.label, s.seen_ago);
-        if !s.last_message.is_empty() {
+        if s.last_message.is_empty() {
+            println!("  {:<13}  (직접 대화 없음)", "");
+        } else {
             println!("  {:<13}  \"{}\"", "", s.last_message);
         }
     }

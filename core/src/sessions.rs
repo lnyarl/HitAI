@@ -6,8 +6,11 @@
 //! - Claude Code : `~/.claude/projects/<경로>/<세션UUID>.jsonl`
 //! - Codex       : `~/.codex/sessions/**/rollout-<날짜>-<세션UUID>.jsonl`
 //!
-//! 두 형식 모두 줄 단위 JSON이고 어딘가에 `cwd`가 들어 있다. 파일 수정 시각이
-//! 마지막 활동 시각이다.
+//! 두 형식 모두 줄 단위 JSON이고 어딘가에 `cwd`가 들어 있다.
+//!
+//! 정렬은 사용자가 마지막으로 말한 시각을 쓴다. 파일 수정 시각은 에이전트가 도구를
+//! 쓰거나 답을 쓸 때마다 바뀌어서, 그것으로 정렬하면 목록 순서가 끊임없이 흔들린다.
+//! 파일 수정 시각은 최근 12시간을 걸러내는 값싼 사전 필터로만 쓴다.
 
 use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
@@ -49,6 +52,8 @@ pub struct Session {
     pub detail: String,
     /// 이 세션에서 사용자가 마지막으로 한 말.
     pub last_message: String,
+    /// 그 말을 한 시각. 목록 정렬 기준이다.
+    pub last_spoke: DateTime<Utc>,
     pub last_seen: DateTime<Utc>,
     /// "3분 전" 같은 표기.
     pub seen_ago: String,
@@ -147,16 +152,22 @@ fn snippet(text: &str) -> Option<String> {
     if flat.is_empty() {
         return None;
     }
-    // 사용자가 직접 한 말이 아닌 것들을 걸러낸다.
-    // 훅이 넣은 문장, 자동 주입된 문맥, 붙여넣은 JSON이나 명령 출력.
-    let noise = flat.starts_with("[HitAI]")
-        || flat.starts_with('<')
-        || flat.starts_with('{')
-        || flat.starts_with('[')
-        || flat.starts_with("# ")
-        || flat.starts_with("Caveat:")
-        || flat.starts_with("=== ");
-    if noise {
+    // 사용자가 직접 한 말이 아닌 것들을 걸러낸다. 세션 기록에는 사용자 차례로
+    // 들어가지만 사람이 타이핑한 것이 아닌 것들이 섞인다. 훅이 넣은 문장,
+    // 도구나 하네스가 주입한 문맥, 붙여넣은 JSON이나 명령 출력.
+    const INJECTED: [&str; 6] = [
+        "[HitAI]",
+        "Runtime context:",
+        "Caveat:",
+        "System:",
+        "<",
+        "=== ",
+    ];
+    if INJECTED.iter().any(|p| flat.starts_with(p)) {
+        return None;
+    }
+    // 구조화된 데이터로 시작하면 사람이 쓴 문장이 아니다.
+    if flat.starts_with('{') || flat.starts_with('[') || flat.starts_with("# ") {
         return None;
     }
     let mut out: String = flat.chars().take(SNIPPET_CHARS).collect();
@@ -166,13 +177,13 @@ fn snippet(text: &str) -> Option<String> {
     Some(out)
 }
 
-/// 사용자가 마지막으로 한 말. 도구마다 기록 형태가 다르다.
-fn last_user_message(path: &Path, tool: &str) -> String {
+/// 사용자가 마지막으로 한 말과 그 시각.
+fn last_user_turn(path: &Path, tool: &str) -> Option<(String, Option<DateTime<Utc>>)> {
     let size = fs::metadata(path).map(|m| m.len()).unwrap_or(0);
     let mut previous = 0u64;
     for want in TAIL_STEPS {
         if let Some(found) = search_tail(path, tool, want) {
-            return found;
+            return Some(found);
         }
         // 이미 파일 전체를 읽었으면 더 넓혀도 소용없다.
         if want >= size || want == previous {
@@ -180,10 +191,10 @@ fn last_user_message(path: &Path, tool: &str) -> String {
         }
         previous = want;
     }
-    String::new()
+    None
 }
 
-fn search_tail(path: &Path, tool: &str, want: u64) -> Option<String> {
+fn search_tail(path: &Path, tool: &str, want: u64) -> Option<(String, Option<DateTime<Utc>>)> {
     let text = tail(path, want)?;
     for line in text.lines().rev() {
         let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
@@ -194,10 +205,18 @@ fn search_tail(path: &Path, tool: &str, want: u64) -> Option<String> {
             _ => claude_user_text(&value),
         };
         if let Some(found) = found.as_deref().and_then(snippet) {
-            return Some(found);
+            return Some((found, spoken_at(&value)));
         }
     }
     None
+}
+
+/// 그 줄에 적힌 시각. 두 도구 모두 최상위 `timestamp`에 ISO 문자열로 남긴다.
+fn spoken_at(value: &serde_json::Value) -> Option<DateTime<Utc>> {
+    let raw = value.get("timestamp")?.as_str()?;
+    DateTime::parse_from_rfc3339(raw)
+        .ok()
+        .map(|t| t.with_timezone(&Utc))
 }
 
 /// Claude Code: `{type:"user", message:{content: "..." | [블록]}}`
@@ -287,16 +306,20 @@ fn claude_session(path: &Path, at: DateTime<Utc>) -> Option<Session> {
     let id = path.file_stem()?.to_string_lossy().to_string();
     let fields = scan_field(path, &["cwd", "gitBranch"]);
     let cwd = fields.get("cwd").cloned().unwrap_or_default();
+    let (message, spoke) = last_user_turn(path, "claude").unwrap_or_default();
+    // 사용자 발언 시각을 못 찾으면 파일 수정 시각으로 대신한다.
+    let spoke = spoke.unwrap_or(at);
     Some(Session {
         id,
         tool: "claude".into(),
         tool_label: tool_label("claude").into(),
         label: basename(&cwd),
         detail: fields.get("gitBranch").cloned().unwrap_or_default(),
-        last_message: last_user_message(path, "claude"),
+        last_message: message,
+        last_spoke: spoke,
         cwd,
         last_seen: at,
-        seen_ago: ago(at),
+        seen_ago: ago(spoke),
     })
 }
 
@@ -339,17 +362,20 @@ fn codex_session(path: &Path, at: DateTime<Utc>) -> Option<Session> {
             .into()
     })?;
     let cwd = fields.get("cwd").cloned().unwrap_or_default();
+    let (message, spoke) = last_user_turn(path, "codex").unwrap_or_default();
+    let spoke = spoke.unwrap_or(at);
     Some(Session {
         label: basename(&cwd),
         // Codex의 자동 생성 대화 제목은 내용과 동떨어질 때가 많아 쓰지 않는다.
         detail: String::new(),
-        last_message: last_user_message(path, "codex"),
+        last_message: message,
+        last_spoke: spoke,
         id,
         tool: "codex".into(),
         tool_label: tool_label("codex").into(),
         cwd,
         last_seen: at,
-        seen_ago: ago(at),
+        seen_ago: ago(spoke),
     })
 }
 
@@ -371,7 +397,7 @@ fn cached(path: &Path, at: DateTime<Utc>, build: impl FnOnce() -> Option<Session
             if *seen == at {
                 let mut session = session.clone();
                 // 경과 시간 표기는 매번 다시 계산한다.
-                session.seen_ago = ago(at);
+                session.seen_ago = ago(session.last_spoke);
                 return Some(session);
             }
         }
@@ -418,7 +444,17 @@ pub fn list() -> Vec<Session> {
         }
     }
 
-    out.sort_by(|a, b| b.last_seen.cmp(&a.last_seen));
+    // 사용자가 말한 시각 기준 최신 순.
+    //
+    // 사용자가 한 번도 말하지 않은 세션은 뒤로 보낸다. 자동화가 띄운 세션은
+    // 사용자 차례가 주입된 문맥뿐이어서 정렬 기준이 없고, 파일 수정 시각으로
+    // 대신하면 실제 대화보다 위로 올라와 순서가 계속 흔들린다.
+    out.sort_by(|a, b| {
+        let spoken = |s: &Session| !s.last_message.is_empty();
+        spoken(b)
+            .cmp(&spoken(a))
+            .then(b.last_spoke.cmp(&a.last_spoke))
+    });
     out
 }
 
