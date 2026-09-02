@@ -483,7 +483,21 @@ fn restore_rules_if_archived() -> Result<(), String> {
 mod tests {
     use super::*;
 
+    /// 연동 설치는 훅 실행 파일을 찾아 복사한다. 아직 빌드되지 않은 환경에서도
+    /// 테스트가 돌아가도록, 없으면 실행 파일 옆에 빈 파일을 놓아 준다.
+    fn ensure_hook_binary() {
+        if find_hook_source().is_ok() {
+            return;
+        }
+        let Ok(exe) = std::env::current_exe() else { return };
+        let Some(dir) = exe.parent().and_then(|d| d.parent()) else {
+            return;
+        };
+        let _ = fs::write(dir.join(HOOK_BIN), b"");
+    }
+
     fn setup(name: &str) -> PathBuf {
+        ensure_hook_binary();
         let tmp = std::env::temp_dir().join(format!("hitai-link-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(tmp.join(".claude")).unwrap();
