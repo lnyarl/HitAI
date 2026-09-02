@@ -33,8 +33,8 @@ const CLAUDE_HOOKS: [(&str, &str); 3] = [
     ("PreToolUse", "tool"),
 ];
 
-/// Codex에 설치할 훅. 규칙과 훈육은 `codex queue`로 직접 넣으므로,
-/// 훅으로만 할 수 있는 "진행 중 도구 호출 차단"만 남긴다.
+/// Installs only the Codex tool-blocking hook because rules and hit messages
+/// are delivered directly through `codex queue`.
 const CODEX_HOOKS: [(&str, &str); 1] = [("PreToolUse", "tool")];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -249,7 +249,7 @@ fn rules_block() -> String {
     let rules = crate::rule_lines();
     let mut out = String::new();
     out.push_str(BLOCK_START);
-    out.push_str("\n## HitAI 훈육 규칙\n\n");
+    out.push_str("\n## HitAI 규칙\n\n");
     if rules.is_empty() {
         out.push_str("아직 등록된 규칙이 없다.\n");
     } else {

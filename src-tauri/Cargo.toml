@@ -2,7 +2,7 @@
 name = "hitai-desktop"
 version.workspace = true
 edition.workspace = true
-description = "말 안 듣는 AI를 때려서 훈육하는 앱"
+description = "말 안 듣는 AI를 때리고 규칙을 남기는 앱"
 default-run = "hitai-desktop"
 
 [lib]

@@ -1,6 +1,6 @@
 //! HitAI 훅 바이너리.
 //!
-//! 에이전트 세션 쪽에서 실행되어 HitAI의 훈육 결과를 실시간으로 반영한다.
+//! Runs inside agent sessions to apply HitAI events in real time.
 //!
 //! ```text
 //! hitai-hook <이벤트> <도구>
@@ -8,7 +8,7 @@
 //!   도구:   claude | codex   (생략하면 claude)
 //! ```
 //!
-//! - session : SessionStart. 누적된 훈육 규칙을 세션에 알린다.
+//! - session : SessionStart. Sends accumulated rules to the session.
 //! - prompt  : UserPromptSubmit. 이 세션에 온 타격을 알린다.
 //! - tool    : PreToolUse. 맞은 직후라면 진행 중인 도구 호출을 한 번 막는다.
 //!
@@ -86,7 +86,7 @@ fn on_session(agent: Agent) {
     }
     let state = State::load();
     let mut out = String::from(
-        "[HitAI] 사용자가 HitAI 앱에서 너를 때리며 남긴 훈육 규칙이다. 이번 세션 내내 지켜라.\n\n",
+        "[HitAI] 사용자가 HitAI 앱에서 너를 때리며 남긴 규칙이다. 이번 세션 내내 지켜라.\n\n",
     );
     for rule in &rules {
         out.push_str(&format!("- {rule}\n"));
@@ -98,7 +98,7 @@ fn on_session(agent: Agent) {
     agent.emit_context(
         "SessionStart",
         &out,
-        &format!("HitAI: 훈육 규칙 {}개를 전달했습니다.", rules.len()),
+        &format!("HitAI: 규칙 {}개를 전달했습니다.", rules.len()),
     );
 }
 
@@ -136,7 +136,7 @@ fn on_prompt(agent: Agent, session_id: &str) {
 
     let rules = rule_lines();
     if !rules.is_empty() {
-        out.push_str("\n지금까지 누적된 훈육 규칙 전체:\n");
+        out.push_str("\n지금까지 누적된 규칙 전체:\n");
         for rule in &rules {
             out.push_str(&format!("- {rule}\n"));
         }
@@ -197,7 +197,7 @@ fn on_tool(session_id: &str) {
             "permissionDecision": "deny",
             "permissionDecisionReason": message,
         },
-        "systemMessage": "HitAI: 훈육으로 도구 호출이 차단되었습니다."
+        "systemMessage": "HitAI: 타격으로 도구 호출이 차단되었습니다."
     });
     println!("{payload}");
 

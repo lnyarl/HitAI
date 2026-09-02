@@ -1,4 +1,4 @@
-//! 살아 있는 세션에 훈육 내용을 직접 전달한다.
+//! Delivers hit messages directly to active sessions.
 //!
 //! Codex는 `codex queue`로 실행 중인 세션에 메시지를 넣을 수 있다. 훅을 거치지 않으므로
 //! 다음 프롬프트를 기다리지 않고, 신뢰 절차도 필요 없다.
@@ -26,7 +26,7 @@ fn codex_bin() -> Option<String> {
     None
 }
 
-/// 훈육 내용을 세션에 전달한다. 전달했으면 Ok(true).
+/// Delivers a hit message to a session. Returns Ok(true) when delivered.
 pub fn deliver(session: &Session, message: &str) -> Result<bool, String> {
     if session.tool != "codex" {
         return Ok(false);
@@ -55,7 +55,7 @@ pub fn deliver(session: &Session, message: &str) -> Result<bool, String> {
     })
 }
 
-/// 세션에 넣을 훈육 메시지.
+/// Builds the hit message sent to a session.
 pub fn message_for(reason: &str, rules: &[String], total_hits: u64) -> String {
     let mut out = String::from("[HitAI] 사용자가 방금 HitAI 앱에서 너를 때렸다.");
     if reason.trim().is_empty() {
@@ -66,7 +66,7 @@ pub fn message_for(reason: &str, rules: &[String], total_hits: u64) -> String {
     out.push_str(&format!(" 지금까지 {total_hits}대 맞았다.\n"));
 
     if !rules.is_empty() {
-        out.push_str("\n지금까지 누적된 훈육 규칙:\n");
+        out.push_str("\n지금까지 누적된 규칙:\n");
         for rule in rules {
             out.push_str(&format!("- {rule}\n"));
         }

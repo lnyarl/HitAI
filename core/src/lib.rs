@@ -20,7 +20,7 @@ pub const MAX_HP: i32 = 100;
 /// 한 대당 깎이는 내구도.
 pub const HIT_DAMAGE: i32 = 7;
 
-const RULES_HEADER: &str = "# HitAI 훈육 규칙\n\n\
+const RULES_HEADER: &str = "# HitAI 규칙\n\n\
 사용자가 HitAI 앱에서 직접 때리며 남긴 규칙이다. 모든 세션에서 지켜야 한다.\n\n";
 
 /// 기준이 되는 홈 경로.
@@ -308,7 +308,7 @@ pub fn remove_rule(rule: &str) -> io::Result<()> {
 
 /* ---------- 때리기 ---------- */
 
-/// 훈육 내용이 세션에 어떻게 전달되었는지.
+/// Describes how a hit message was delivered to a session.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Delivery {
     /// 세션에 바로 넣었다.

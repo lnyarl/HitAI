@@ -4,7 +4,7 @@ use hitai_core::link::{self, Tool, ALL_TOOLS};
 use hitai_core::{sessions, Config, State, MAX_HP};
 
 const USAGE: &str = "\
-HitAI - 말 안 듣는 AI를 때려서 훈육한다
+HitAI - 말 안 듣는 AI를 때리고 규칙을 남긴다
 
 사용법:
   hitai hit [이유]            한 대 때린다. 이유를 적으면 규칙으로 남는다
