@@ -188,10 +188,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         // Remembers window position, size and maximized state.
-        .setup(|app| {
-            window::attach(app.handle());
-            Ok(())
-        })
         .on_window_event(|w, event| window::on_event(w, event))
         .invoke_handler(tauri::generate_handler![
             get_snapshot,
