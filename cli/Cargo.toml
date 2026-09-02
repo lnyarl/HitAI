@@ -1,0 +1,12 @@
+[package]
+name = "hitai-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "hitai"
+path = "src/main.rs"
+
+[dependencies]
+hitai-core = { path = "../core" }
+tokio = { version = "1", features = ["rt", "macros"] }

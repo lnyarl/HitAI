@@ -1,0 +1,13 @@
+[package]
+name = "hitai-hook"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "hitai-hook"
+path = "src/main.rs"
+
+[dependencies]
+hitai-core = { path = "../core" }
+serde_json = { workspace = true }
+chrono = { workspace = true }

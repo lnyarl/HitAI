@@ -1,0 +1,29 @@
+[package]
+name = "hitai-desktop"
+version.workspace = true
+edition.workspace = true
+description = "말 안 듣는 AI를 때려서 훈육하는 앱"
+default-run = "hitai-desktop"
+
+[lib]
+name = "hitai_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "hitai-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+hitai-core = { path = "../core" }
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+dirs = { workspace = true }
+
+tokio = { version = "1", features = ["rt-multi-thread"] }
+open = "5"

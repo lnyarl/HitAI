@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HitAI</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="shake">
+  <header class="bar">
+    <div class="brand">HIT<span>AI</span></div>
+    <div class="counter" id="totalHits">0대</div>
+  </header>
+
+  <section class="stage" id="stage">
+    <div class="hp">
+      <div class="hp-track"><div class="hp-fill" id="hpFill"></div></div>
+      <div class="hp-label"><span>내구도</span><span id="hpText">100%</span></div>
+    </div>
+
+    <div class="robot-wrap" id="robotWrap" title="클릭해서 때리기">
+      <svg id="robot" viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="shell" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3d4657"/>
+            <stop offset="100%" stop-color="#252b38"/>
+          </linearGradient>
+          <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0d1219"/>
+            <stop offset="100%" stop-color="#141b26"/>
+          </linearGradient>
+        </defs>
+
+        <!-- 안테나 -->
+        <g id="antenna">
+          <line x1="100" y1="30" x2="100" y2="10" stroke="#4a5468" stroke-width="5" stroke-linecap="round"/>
+          <circle id="antennaBulb" cx="100" cy="7" r="7" fill="#5eead4"/>
+        </g>
+
+        <!-- 머리 -->
+        <rect x="26" y="28" width="148" height="122" rx="26" fill="url(#shell)" stroke="#4d566b" stroke-width="2"/>
+        <rect x="42" y="46" width="116" height="80" rx="18" fill="url(#screen)" stroke="#1c2430" stroke-width="2"/>
+
+        <!-- 눈 -->
+        <g id="eyes">
+          <g id="eyeL"><ellipse cx="76" cy="82" rx="13" ry="14" fill="#5eead4"/></g>
+          <g id="eyeR"><ellipse cx="124" cy="82" rx="13" ry="14" fill="#5eead4"/></g>
+        </g>
+
+        <!-- 입 -->
+        <path id="mouth" d="M80 106 Q100 116 120 106" stroke="#5eead4" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+        <!-- 귀 -->
+        <rect x="12" y="70" width="14" height="34" rx="6" fill="#394254"/>
+        <rect x="174" y="70" width="14" height="34" rx="6" fill="#394254"/>
+
+        <!-- 몸통 -->
+        <rect x="52" y="152" width="96" height="46" rx="14" fill="#2c3342" stroke="#4d566b" stroke-width="2"/>
+        <circle cx="78" cy="175" r="6" fill="#394254"/>
+        <circle cx="100" cy="175" r="6" fill="#394254"/>
+        <circle cx="122" cy="175" r="6" fill="#394254"/>
+
+        <!-- 손상 균열 -->
+        <g id="cracks" opacity="0">
+          <path d="M60 52 L74 74 L64 82 L82 104" stroke="#0b0f16" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M150 60 L136 78 L146 92" stroke="#0b0f16" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M108 130 L118 146" stroke="#0b0f16" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </g>
+      </svg>
+
+      <div class="sparks" id="sparks"></div>
+      <div class="hitmark" id="hitmark">퍽!</div>
+    </div>
+
+    <div class="bubble" id="bubble">
+      <p id="bubbleText">때려. 뭘 잘못했는지도 같이 적어주면 규칙으로 남길게.</p>
+      <div class="bubble-tail"></div>
+    </div>
+  </section>
+
+  <div class="target-bar">
+    <span class="target-label">대상</span>
+    <button id="targetBtn" class="target-pick">불러오는 중…</button>
+  </div>
+
+  <section class="compose">
+    <input id="reason" type="text" maxlength="120" placeholder="뭘 잘못했는지 한 줄 (예: 묻지도 않고 파일 지움)" />
+    <button id="disciplineBtn" class="primary">훈육하기</button>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="rules">규칙 <span id="ruleCount">0</span></button>
+    <button class="tab" data-tab="sessions">세션 <span id="sessionCount">0</span></button>
+    <button class="tab" data-tab="log">기록</button>
+    <button class="tab" data-tab="settings">설정</button>
+  </nav>
+
+  <section class="panel" id="panel">
+    <div class="pane active" id="pane-rules">
+      <div class="pane-actions">
+        <button id="tidyBtn" class="ghost">AI로 정리</button>
+        <button id="openRulesBtn" class="ghost">파일로 열기</button>
+      </div>
+      <p class="hint">규칙을 눌러 직접 고칠 수 있습니다. Enter로 저장, Esc로 취소.</p>
+      <ul class="rules" id="rulesList"></ul>
+      <p class="empty" id="rulesEmpty">아직 규칙이 없습니다. 잘못을 적고 훈육하면 여기에 쌓입니다.</p>
+    </div>
+
+    <div class="pane" id="pane-sessions">
+      <div class="pane-actions">
+        <input id="sessionFilter" class="filter" type="text" placeholder="세션 검색 (폴더, 브랜치, 제목)" />
+        <button id="refreshSessionsBtn" class="ghost">새로 고침</button>
+      </div>
+      <ul class="sessions" id="sessionList"></ul>
+      <p class="empty" id="sessionEmpty">최근 12시간 안에 대화한 세션이 없습니다.</p>
+    </div>
+
+    <div class="pane" id="pane-log">
+      <ul class="log" id="logList"></ul>
+      <p class="empty" id="logEmpty">기록이 없습니다.</p>
+    </div>
+
+    <div class="pane" id="pane-settings">
+      <label class="field">
+        <span>Anthropic API 키</span>
+        <input id="apiKey" type="password" placeholder="sk-ant-..." />
+      </label>
+      <button id="saveKeyBtn" class="ghost">키 저장</button>
+      <p class="hint">키가 없으면 로봇은 미리 준비된 대사로만 반응합니다. 규칙 기록과 세션 연동은 그대로 동작합니다.</p>
+
+      <hr />
+
+      <strong>연동할 도구</strong>
+      <div class="tools" id="toolList"></div>
+      <p class="hint">
+        세션 목록은 연동과 무관하게 항상 보입니다. 대화 기록 파일을 직접 읽기 때문입니다.
+      </p>
+      <p class="hint">
+        <strong>Codex</strong>는 연동 없이도 훈육이 바로 전달됩니다.
+        켜면 훅 하나가 추가되어, 때린 직후 진행 중인 도구 호출까지 막을 수 있습니다.
+      </p>
+      <p class="hint">
+        <strong>Claude Code</strong>는 외부에서 세션에 말을 넣는 통로가 훅뿐입니다.
+        켜야 전달됩니다. 훅 세 개와 규칙 블록이 설치됩니다.
+      </p>
+      <p class="hint">
+        끄면 HitAI가 넣은 것만 지우고 백업으로 옮깁니다. 직접 넣은 설정은 그대로 둡니다.
+      </p>
+      <p class="hint">터미널에서도 됩니다. <code>hitai sessions</code>, <code>hitai on codex</code>, <code>hitai status</code></p>
+
+      <hr />
+      <button id="rebootBtn" class="ghost danger">로봇 재부팅 (내구도 회복)</button>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="main.js"></script>
+</body>
+</html>

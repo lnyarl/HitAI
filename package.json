@@ -1,0 +1,15 @@
+{
+  "name": "hitai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sidecar": "node scripts/sidecar.mjs",
+    "sidecar:release": "node scripts/sidecar.mjs --release",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
